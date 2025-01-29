@@ -4,7 +4,6 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/rhymond/go-money)](https://goreportcard.com/report/github.com/rhymond/go-money)
 [![Coverage Status](https://coveralls.io/repos/github/Rhymond/go-money/badge.svg?branch=master)](https://coveralls.io/github/Rhymond/go-money?branch=master)
-[![Build Status](https://travis-ci.org/Rhymond/go-money.svg?branch=master)](https://travis-ci.org/Rhymond/go-money)
 [![GoDoc](https://godoc.org/github.com/Rhymond/go-money?status.svg)](https://godoc.org/github.com/Rhymond/go-money)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -14,10 +13,14 @@ This package provides basic and precise Money operations such as rounding, split
 ```go
 package main
 
-import "github.com/Rhymond/go-money"
+import (
+  "log"
+
+  "github.com/Rhymond/go-money"
+)
 
 func main() {
-    pound := money.New(100, "GBP")
+    pound := money.New(100, money.GBP)
     twoPounds, err := pound.Add(pound)
 
     if err != nil {
@@ -53,9 +56,13 @@ $ go get github.com/Rhymond/go-money
 Usage
 -
 ### Initialization
-Initialize Money by using smallest unit value (e.g 100 represents 1 pound). Use ISO 4217 Currency Code to set money Currency
+Initialize Money by using smallest unit value (e.g 100 represents 1 pound). Use ISO 4217 Currency Code to set money Currency. Note that constants are also provided for all ISO 4217 currency codes.
 ```go
-pound := money.New(100, "GBP")
+pound := money.New(100, money.GBP)
+```
+Or initialize Money using the direct amount.
+```go
+quarterEuro := money.NewFromFloat(0.25, money.EUR)
 ```
 Comparison
 -
@@ -66,17 +73,22 @@ Comparison
 * GreaterThanOrEqual
 * LessThan
 * LessThanOrEqual
+* Compare
 
 Comparisons must be made between the same currency units.
 
 ```go
-pound := money.New(100, "GBP")
-twoPounds := money.New(200, "GBP")
-twoEuros := money.New(200, "EUR")
+pound := money.New(100, money.GBP)
+twoPounds := money.New(200, money.GBP)
+twoEuros := money.New(200, money.EUR)
 
 pound.GreaterThan(twoPounds) // false, nil
 pound.LessThan(twoPounds) // true, nil
 twoPounds.Equals(twoEuros) // false, error: Currencies don't match
+twoPounds.Compare(pound) // 1, nil
+pound.Compare(twoPounds) // -1, nil
+pound.Compare(pound) // 0, nil
+pound.Compare(twoEuros) // pound.amount, ErrCurrencyMismatch
 ```
 Asserts
 -
@@ -89,8 +101,8 @@ Asserts
 To assert if Money value is equal to zero use `IsZero()`
 
 ```go
-pound := money.New(100, "GBP")
-result := pound.IsZero(pound) // false
+pound := money.New(100, money.GBP)
+result := pound.IsZero() // false
 ```
 
 #### Positive value
@@ -98,8 +110,8 @@ result := pound.IsZero(pound) // false
 To assert if Money value is more than zero use `IsPositive()`
 
 ```go
-pound := money.New(100, "GBP")
-pound.IsPositive(pound) // true
+pound := money.New(100, money.GBP)
+pound.IsPositive() // true
 ```
 
 #### Negative value
@@ -107,15 +119,14 @@ pound.IsPositive(pound) // true
 To assert if Money value is less than zero use `IsNegative()`
 
 ```go
-pound := money.New(100, "GBP")
-pound.IsNegative(pound) // false
+pound := money.New(100, money.GBP)
+pound.IsNegative() // false
 ```
 
 Operations
 -
 * Add
 * Subtract
-* Divide
 * Multiply
 * Absolute
 * Negative
@@ -127,8 +138,8 @@ Comparisons must be made between the same currency units.
 Additions can be performed using `Add()`.
 
 ```go
-pound := money.New(100, "GBP")
-twoPounds := money.New(200, "GBP")
+pound := money.New(100, money.GBP)
+twoPounds := money.New(200, money.GBP)
 
 result, err := pound.Add(twoPounds) // £3.00, nil
 ```
@@ -138,8 +149,8 @@ result, err := pound.Add(twoPounds) // £3.00, nil
 Subtraction can be performed using `Subtract()`.
 
 ```go
-pound := money.New(100, "GBP")
-twoPounds := money.New(200, "GBP")
+pound := money.New(100, money.GBP)
+twoPounds := money.New(200, money.GBP)
 
 result, err := pound.Subtract(twoPounds) // -£1.00, nil
 ```
@@ -149,34 +160,17 @@ result, err := pound.Subtract(twoPounds) // -£1.00, nil
 Multiplication can be performed using `Multiply()`.
 
 ```go
-pound := money.New(100, "GBP")
+pound := money.New(100, money.GBP)
 
 result := pound.Multiply(2) // £2.00
 ```
-
-#### Division
-
-Division can be performed using `Divide()`.
-
-```go
-pound := money.New(100, "GBP")
-
-result := pound.Divide(2) // £0.50
-```
-
-There is possibilities to lose pennies by using division operation e.g:
-```go
-money.New(100, "GBP").Divide(3) // £0.33
-```
-In order to split amount without losing use `Split()` operation.
-
 
 #### Absolute
 
 Return `absolute` value of Money structure
 
 ```go
-pound := money.New(-100, "GBP")
+pound := money.New(-100, money.GBP)
 
 result := pound.Absolute() // £1.00
 ```
@@ -186,7 +180,7 @@ result := pound.Absolute() // £1.00
 Return `negative` value of Money structure
 
 ```go
-pound := money.New(100, "GBP")
+pound := money.New(100, money.GBP)
 
 result := pound.Negative() // -£1.00
 ```
@@ -204,7 +198,7 @@ In order to split Money for parties without losing any pennies due to rounding d
 After division leftover pennies will be distributed round-robin amongst the parties. This means that parties listed first will likely receive more pennies than ones that are listed later.
 
 ```go
-pound := money.New(100, "GBP")
+pound := money.New(100, money.GBP)
 parties, err := pound.Split(3)
 
 if err != nil {
@@ -223,7 +217,7 @@ To perform allocation operation use `Allocate()`.
 It splits money using the given ratios without losing pennies and as Split operations distributes leftover pennies amongst the parties with round-robin principle.
 
 ```go
-pound := money.New(100, "GBP")
+pound := money.New(100, money.GBP)
 // Allocate is variadic function which can receive ratios as
 // slice (int[]{33, 33, 33}...) or separated by a comma integers
 parties, err := pound.Allocate(33, 33, 33)
@@ -243,12 +237,12 @@ Format
 To format and return Money as a string use `Display()`.
 
 ```go
-money.New(123456789, "EUR").Display() // €1,234,567.89
+money.New(123456789, money.EUR).Display() // €1,234,567.89
 ```
 To format and return Money as a float64 representing the amount value in the currency's subunit use `AsMajorUnits()`.
 
 ```go
-money.New(123456789, "EUR").AsMajorUnits() // 1234567.89
+money.New(123456789, money.EUR).AsMajorUnits() // 1234567.89
 ```
 
 Contributing
